@@ -3,306 +3,274 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 存錢神器：數位帳戶高利圖鑑</title>
+    <title>若慈數位名片助手</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f3f4f6;
-        }
-        .gradient-text {
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #0F172A; }
+        .gold-bg { background: linear-gradient(135deg, #C0A062 0%, #a68a52 100%); }
     </style>
+    <!-- 全域錯誤攔截器 -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errorDiv = document.getElementById('debugInfo');
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.innerText = "系統錯誤: " + message + "\n行數: " + lineno;
+            }
+            const ui = document.getElementById('errorUI');
+            const det = document.getElementById('errorDetail');
+            if(ui && det) {
+                // 忽略 resize loop 錯誤，這在某些瀏覽器是無害的
+                if(message && message.includes("ResizeObserver loop")) return;
+                
+                ui.classList.remove('hidden');
+                document.getElementById('statusUI').classList.add('hidden');
+                det.innerText = "程式執行錯誤: " + message;
+            }
+        };
+    </script>
 </head>
-<body class="flex flex-col min-h-screen items-center">
+<body class="min-h-screen flex items-center justify-center p-6 text-center text-white">
 
-    <div class="w-full max-w-md bg-gray-50 min-h-screen shadow-2xl overflow-hidden flex flex-col">
+    <div class="max-w-xs w-full">
+        <!-- 狀態顯示 -->
+        <div id="statusUI">
+            <div class="w-12 h-12 border-4 border-[#C0A062] border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+            <h1 class="text-xl font-bold mb-2 tracking-wide">系統啟動中</h1>
+            <p id="statusDesc" class="text-gray-400 text-sm">正在喚醒數位名片...</p>
+        </div>
+
+        <!-- 手動發送按鈕 (當自動發送被取消或失敗時顯示) -->
+        <div id="manualUI" class="hidden">
+            <div class="w-16 h-16 gold-bg rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-2xl">
+                <i class="fas fa-paper-plane text-white text-2xl"></i>
+            </div>
+            <h1 class="text-xl font-bold mb-2">名片已就緒</h1>
+            <p class="text-gray-400 text-xs mb-8">點擊下方按鈕開始分享</p>
+            <button onclick="sendRoseCard()" class="w-full py-4 gold-bg text-white rounded-2xl font-black text-lg active:scale-95 transition-all shadow-lg hover:shadow-yellow-600/20">
+                發送名片
+            </button>
+        </div>
+
+        <!-- 錯誤 UI -->
+        <div id="errorUI" class="hidden">
+            <div class="bg-red-500/10 border border-red-500/50 p-6 rounded-3xl text-left">
+                <h1 class="text-red-400 font-bold mb-2 text-center">發生錯誤</h1>
+                <p id="errorDetail" class="text-gray-300 text-xs break-all font-mono mb-4"></p>
+                <div id="envInfo" class="text-[10px] text-gray-500 border-t border-gray-700 pt-2 font-mono"></div>
+                <button onclick="window.location.reload()" class="w-full mt-4 py-2 bg-white/10 rounded text-xs uppercase hover:bg-white/20">重新載入</button>
+            </div>
+        </div>
         
-        <!-- Header -->
-        <div class="bg-gradient-to-br from-blue-900 to-indigo-900 text-white p-8 rounded-b-[2.5rem] shadow-xl relative overflow-hidden">
-            <div class="absolute -top-10 -right-10 w-40 h-40 bg-yellow-400 rounded-full blur-[80px] opacity-20"></div>
-            <div class="absolute top-20 -left-10 w-32 h-32 bg-pink-500 rounded-full blur-[60px] opacity-20"></div>
-
-            <div class="relative z-10 text-center">
-                <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur px-3 py-1 rounded-full border border-white/20 mb-3">
-                    <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                    <p class="text-yellow-300 font-bold tracking-widest text-[10px] uppercase">Benson 2026 私藏清單</p>
-                </div>
-                <h1 class="text-3xl font-extrabold mb-2 leading-tight">別讓錢睡在定存裡！<br><span class="text-yellow-400 text-4xl">數位帳戶高利圖鑑</span></h1>
-                <p class="text-blue-200 text-xs mt-3 leading-relaxed opacity-90">
-                    定存才 1.7%？這裡有 <b>10%</b> 的選擇。<br>
-                    精選 9 間銀行，幫你的現金流<b>穿上防彈衣</b>。
-                </p>
-                
-                <!-- 個人 IP 標籤 -->
-                <div class="mt-6 flex items-center justify-center gap-3 bg-black/20 py-2 px-4 rounded-xl mx-auto w-fit border border-white/10">
-                    <div class="w-8 h-8 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md border-2 border-white/30">
-                        B
-                    </div>
-                    <div class="text-left">
-                        <p class="text-[9px] text-blue-300 font-bold uppercase tracking-wide">Financial Planner</p>
-                        <p class="text-sm font-bold text-white">謝兆鎔 Benson</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Content -->
-        <div class="p-5 space-y-8 flex-1">
-            
-            <!-- 區塊 1: 新戶衝刺 -->
-            <div class="space-y-4">
-                <div class="flex items-center gap-2 px-1">
-                    <span class="bg-red-100 text-red-600 p-1.5 rounded-lg">
-                        <i class="fas fa-fire-alt text-lg"></i>
-                    </span>
-                    <div>
-                        <h2 class="font-bold text-xl text-gray-800">新戶限定．暴力高利區</h2>
-                        <p class="text-[10px] text-gray-400">適合短期停泊資金，把利息拿好拿滿</p>
-                    </div>
-                </div>
-                
-                <!-- Card 1: 聯邦 -->
-                <a href="https://newnewbank.com.tw/" target="_blank" rel="noopener noreferrer" class="block group transform transition hover:-translate-y-1 active:scale-95">
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 relative overflow-hidden">
-                        <div class="absolute left-0 top-0 w-1.5 h-full bg-gradient-to-b from-pink-500 to-rose-600"></div>
-                        <div class="flex justify-between items-start pl-3">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h3 class="font-bold text-gray-900 text-lg">聯邦 New New Bank</h3>
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 font-bold border border-rose-100">🔥 短期爆發力 No.1</span>
-                                </div>
-                                <div class="flex items-baseline gap-1 mt-1">
-                                    <span class="text-4xl font-black gradient-text bg-gradient-to-r from-pink-600 to-rose-600">10%</span>
-                                    <span class="text-xs text-gray-400 font-medium">年利率</span>
-                                </div>
-                            </div>
-                            <div class="text-center min-w-[70px]">
-                                <p class="text-xl font-bold text-gray-700">15<span class="text-xs">萬</span></p>
-                                <p class="text-[10px] text-gray-400">額度上限</p>
-                            </div>
-                        </div>
-                        <div class="mt-2 pl-3 flex justify-between items-end border-t border-gray-50 pt-2">
-                            <p class="text-[10px] text-gray-500"><i class="fas fa-stopwatch mr-1"></i>首月超高利，適合快閃族</p>
-                            <span class="text-rose-500 text-xs font-bold group-hover:underline">一鍵開戶 &rarr;</span>
-                        </div>
-                    </div>
-                </a>
-
-                <!-- Card 2: 凱基 -->
-                <a href="https://www.kgibank.com.tw/zh-tw/personal/digital-banking/karry" target="_blank" rel="noopener noreferrer" class="block group transform transition hover:-translate-y-1 active:scale-95">
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 relative overflow-hidden">
-                        <div class="absolute left-0 top-0 w-1.5 h-full bg-gradient-to-b from-orange-400 to-red-500"></div>
-                        <div class="flex justify-between items-start pl-3">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h3 class="font-bold text-gray-900 text-lg">凱基 Karry</h3>
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 font-bold border border-orange-100">🦄 2026 重點黑馬</span>
-                                </div>
-                                <div class="flex items-baseline gap-1 mt-1">
-                                    <span class="text-4xl font-black gradient-text bg-gradient-to-r from-orange-500 to-red-500">3.3%</span>
-                                    <span class="text-xs text-gray-400 font-medium">年利率</span>
-                                </div>
-                            </div>
-                            <div class="text-center min-w-[70px]">
-                                <p class="text-xl font-bold text-gray-700">5<span class="text-xs">萬</span></p>
-                                <p class="text-[10px] text-gray-400">額度上限</p>
-                            </div>
-                        </div>
-                        <div class="mt-2 pl-3 flex justify-between items-end border-t border-gray-50 pt-2">
-                            <p class="text-[10px] text-gray-500"><i class="fas fa-tasks mr-1"></i>需完成指定任務，CP值高</p>
-                            <span class="text-orange-500 text-xs font-bold group-hover:underline">一鍵開戶 &rarr;</span>
-                        </div>
-                    </div>
-                </a>
-
-                <!-- Card 3: 將來 -->
-                <a href="https://www.nextbank.com.tw/" target="_blank" rel="noopener noreferrer" class="block group transform transition hover:-translate-y-1 active:scale-95">
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 relative overflow-hidden">
-                        <div class="absolute left-0 top-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-yellow-600"></div>
-                        <div class="flex justify-between items-start pl-3">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h3 class="font-bold text-gray-900 text-lg">將來銀行 Next</h3>
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 font-bold border border-yellow-100">💰 網銀口袋首選</span>
-                                </div>
-                                <div class="flex items-baseline gap-1 mt-1">
-                                    <span class="text-4xl font-black gradient-text bg-gradient-to-r from-yellow-500 to-yellow-700">10%</span>
-                                    <span class="text-xs text-gray-400 font-medium">年利率</span>
-                                </div>
-                            </div>
-                            <div class="text-center min-w-[70px]">
-                                <p class="text-xl font-bold text-gray-700">5<span class="text-xs">萬</span></p>
-                                <p class="text-[10px] text-gray-400">額度上限</p>
-                            </div>
-                        </div>
-                        <div class="mt-2 pl-3 flex justify-between items-end border-t border-gray-50 pt-2">
-                            <p class="text-[10px] text-gray-500"><i class="fas fa-gift mr-1"></i>新戶口袋帳戶專案</p>
-                            <span class="text-yellow-600 text-xs font-bold group-hover:underline">一鍵開戶 &rarr;</span>
-                        </div>
-                    </div>
-                </a>
-
-                <!-- Card 4: 台新 -->
-                <a href="https://richart.tw/" target="_blank" rel="noopener noreferrer" class="block group transform transition hover:-translate-y-1 active:scale-95">
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 relative overflow-hidden">
-                        <div class="absolute left-0 top-0 w-1.5 h-full bg-gradient-to-b from-red-500 to-orange-500"></div>
-                        <div class="flex justify-between items-start pl-3">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h3 class="font-bold text-gray-900 text-lg">台新 Richart</h3>
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 font-bold border border-orange-100">🐶 萬年不敗神卡</span>
-                                </div>
-                                <div class="flex items-baseline gap-1 mt-1">
-                                    <span class="text-4xl font-black gradient-text bg-gradient-to-r from-red-600 to-orange-600">3.5%</span>
-                                    <span class="text-xs text-gray-400 font-medium">年利率</span>
-                                </div>
-                            </div>
-                            <div class="text-center min-w-[70px]">
-                                <p class="text-xl font-bold text-gray-700">10<span class="text-xs">萬</span></p>
-                                <p class="text-[10px] text-gray-400">額度上限</p>
-                            </div>
-                        </div>
-                        <div class="mt-2 pl-3 flex justify-between items-end border-t border-gray-50 pt-2">
-                            <p class="text-[10px] text-gray-500"><i class="fas fa-user-plus mr-1"></i>新戶無腦領，舊戶解任務</p>
-                            <span class="text-orange-500 text-xs font-bold group-hover:underline">一鍵開戶 &rarr;</span>
-                        </div>
-                    </div>
-                </a>
-            </div>
-
-            <!-- 區塊 2: 舊戶穩健 -->
-            <div class="space-y-4">
-                <div class="flex items-center gap-2 px-1">
-                    <span class="bg-blue-100 text-blue-600 p-1.5 rounded-lg">
-                        <i class="fas fa-shield-alt text-lg"></i>
-                    </span>
-                    <div>
-                        <h2 class="font-bold text-xl text-gray-800">舊戶友善．長期飯票區</h2>
-                        <p class="text-[10px] text-gray-400">不玩套路，給你好額度穩穩領息</p>
-                    </div>
-                </div>
-
-                <!-- Card 5: 台企銀 -->
-                <a href="https://www.tbb.com.tw/zh-tw/digital/hokii/digital-account/intro" target="_blank" rel="noopener noreferrer" class="block group transform transition hover:-translate-y-1 active:scale-95">
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 relative overflow-hidden">
-                        <div class="absolute left-0 top-0 w-1.5 h-full bg-gradient-to-b from-indigo-500 to-purple-600"></div>
-                        <div class="flex justify-between items-center pl-3">
-                            <div>
-                                <h3 class="font-bold text-gray-900">台企銀 Hokii</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-2xl font-bold text-indigo-700">2.9%</span>
-                                    <span class="text-xs text-gray-400">| 額度 15 萬</span>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[10px] px-2 py-1 rounded-full bg-indigo-50 text-indigo-600 font-bold mb-1 inline-block">🤫 低調隱藏版</span>
-                                <span class="text-indigo-600 text-xs font-bold block group-hover:underline">一鍵開戶 &rarr;</span>
-                            </div>
-                        </div>
-                        <p class="text-[10px] text-gray-400 mt-2 pl-3 ml-1 border-t border-gray-50 pt-1">新戶 2.9%，舊戶最高 2.7% (需任務)</p>
-                    </div>
-                </a>
-
-                <!-- Card 6: 遠東 -->
-                <a href="https://www.bankee.com.tw/" target="_blank" rel="noopener noreferrer" class="block group transform transition hover:-translate-y-1 active:scale-95">
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 relative overflow-hidden">
-                        <div class="absolute left-0 top-0 w-1.5 h-full bg-gradient-to-b from-red-600 to-red-800"></div>
-                        <div class="flex justify-between items-center pl-3">
-                            <div>
-                                <h3 class="font-bold text-gray-900">遠東 Bankee</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-2xl font-bold text-red-800">2.6%</span>
-                                    <span class="text-xs text-gray-400">| 額度 5 萬</span>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[10px] text-gray-400 block mb-1">🤝 社群圈存制</span>
-                                <span class="text-red-700 text-xs font-bold group-hover:underline">一鍵開戶 &rarr;</span>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-
-                <!-- Card 7: 華南 -->
-                <a href="https://www.hncb.com.tw/" target="_blank" rel="noopener noreferrer" class="block group transform transition hover:-translate-y-1 active:scale-95">
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 relative overflow-hidden">
-                        <div class="absolute left-0 top-0 w-1.5 h-full bg-gradient-to-b from-blue-400 to-blue-600"></div>
-                        <div class="flex justify-between items-center pl-3">
-                            <div>
-                                <h3 class="font-bold text-gray-900">華南 SnY</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-2xl font-bold text-blue-700">2.5%</span>
-                                    <span class="text-xs text-gray-400">| 額度 10 萬</span>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[10px] text-gray-400 block mb-1">📈 舊戶利率王</span>
-                                <span class="text-blue-600 text-xs font-bold group-hover:underline">一鍵開戶 &rarr;</span>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-
-                <!-- Card 8: 第一 iLEO -->
-                <a href="https://www.firstbank.com.tw/sites/fcb/iLEO" target="_blank" rel="noopener noreferrer" class="block group transform transition hover:-translate-y-1 active:scale-95">
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 relative overflow-hidden">
-                        <div class="absolute left-0 top-0 w-1.5 h-full bg-gradient-to-b from-green-500 to-emerald-600"></div>
-                        <div class="flex justify-between items-center pl-3">
-                            <div>
-                                <h3 class="font-bold text-gray-900">第一銀行 iLEO</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-2xl font-bold text-emerald-700">2%</span>
-                                    <span class="text-xs text-gray-400">| 額度 12 萬</span>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[10px] text-gray-400 block mb-1">🦁 佛系存錢必備</span>
-                                <span class="text-emerald-600 text-xs font-bold group-hover:underline">一鍵開戶 &rarr;</span>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-
-                <!-- Card 9: 永豐 -->
-                <a href="https://dawho.tw/" target="_blank" rel="noopener noreferrer" class="block group transform transition hover:-translate-y-1 active:scale-95">
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 relative overflow-hidden">
-                        <div class="absolute left-0 top-0 w-1.5 h-full bg-gradient-to-b from-gray-700 to-gray-900"></div>
-                        <div class="flex justify-between items-center pl-3">
-                            <div>
-                                <h3 class="font-bold text-gray-900">永豐 大戶 DAWHO</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-2xl font-bold text-gray-800">1.5%</span>
-                                    <span class="text-xs text-gray-400">| 額度 30 萬</span>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[10px] text-gray-400 block mb-1">🐋 大戶專屬尊榮</span>
-                                <span class="text-gray-600 text-xs font-bold group-hover:underline">一鍵開戶 &rarr;</span>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-
-        </div>
-
-        <!-- Footer -->
-        <div class="bg-gray-100 p-6 text-center mt-auto w-full">
-            <div class="text-[10px] text-gray-400 mb-4 leading-relaxed space-y-1">
-                <p>* 本表數據僅供參考，實際利率以各銀行 2026 最新公告為準。</p>
-                <p>* 高利活存僅為理財第一步，完整資產配置請諮詢專業顧問。</p>
-            </div>
-            <div class="inline-block bg-white px-6 py-2.5 rounded-full shadow-sm border border-gray-200">
-                <p class="text-sm font-bold text-blue-900 tracking-wide">理財找兆鎔，生活更從容</p>
-            </div>
-        </div>
-
+        <div id="debugInfo" style="display:none; position:fixed; bottom:0; left:0; width:100%; background:rgba(0,0,0,0.9); color:red; font-size:10px; padding:10px; text-align:left; z-index:9999;"></div>
     </div>
 
+    <script>
+        // 若慈的 LIFF ID
+        const MY_LIFF_ID = "2009033701-68BHXEWs"; 
+
+        // 圖片資源 (若慈版)
+        const IMG_SERVICE = "https://i.postimg.cc/PJJfxyfP/VIP_%E8%B2%A1%E5%8B%99%E7%AD%96%E5%8A%83%E6%9B%B8_16%E6%AF%949.png";
+        const IMG_COMPANY = "https://i.postimg.cc/3NNrR1rY/%E5%9C%96%E7%89%871.jpg";
+        const IMG_PROFILE = "https://i.postimg.cc/QCh6Bp0M/S-5316733.jpg"; // 若慈的照片
+
+        const roseJson = {
+          "type": "carousel",
+          "contents": [
+            // === 第一張卡片 (人物照) ===
+            {
+              "type": "bubble",
+              "size": "mega",
+              "header": {
+                "type": "box", "layout": "vertical", "backgroundColor": "#111111", "paddingAll": "16px",
+                "contents": [
+                  { "type": "text", "text": "PROFESSIONAL PROFILE", "color": "#C0A062", "size": "xxs", "weight": "bold" },
+                  { "type": "text", "text": "01", "color": "#222222", "align": "end", "size": "3xl", "weight": "bold", "position": "absolute", "offsetTop": "5px", "offsetEnd": "15px" }
+                ]
+              },
+              "hero": {
+                "type": "image",
+                "url": IMG_PROFILE,
+                "size": "full", "aspectRatio": "1:1", "aspectMode": "cover", "backgroundColor": "#F3F4F6"
+              },
+              "body": {
+                "type": "box", "layout": "vertical", "paddingAll": "20px",
+                "contents": [
+                  { "type": "text", "text": "若慈 Rose", "weight": "bold", "size": "xl", "color": "#111827" },
+                  { "type": "text", "text": "御謙VIP菁英會", "size": "xs", "color": "#C0A062", "margin": "xs", "weight": "bold" },
+                  { "type": "separator", "margin": "md", "color": "#EEEEEE" },
+                  { "type": "box", "layout": "vertical", "margin": "md", "spacing": "sm",
+                    "contents": [
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "CIA500 強團隊", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] },
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "團隊累積管理客戶資金高達 20 億", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] },
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "全台 RFP 財務策劃師最高濃度團隊", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] }
+                    ]
+                  }
+                ]
+              },
+              "footer": {
+                "type": "box", "layout": "vertical", "spacing": "sm", "paddingAll": "16px",
+                "contents": [
+                  { "type": "button", "style": "primary", "height": "sm", "color": "#C0A062", "action": { "type": "uri", "label": "✨ 加 LINE 好友", "uri": "https://line.me/ti/p/Mr5JeZFTkv" } },
+                  { "type": "button", "style": "primary", "height": "sm", "color": "#404040", "action": { "type": "uri", "label": "📝 諮詢表單連結", "uri": "https://financesheet-1.vercel.app/" } },
+                  { "type": "button", "style": "primary", "height": "sm", "color": "#404040", "action": { "type": "uri", "label": "➤ 分享給好友", "uri": "https://liff.line.me/" + MY_LIFF_ID } }
+                ]
+              }
+            },
+            // === 第二張卡片 (財務書) ===
+            {
+              "type": "bubble",
+              "size": "mega",
+              "header": {
+                "type": "box", "layout": "vertical", "backgroundColor": "#111111", "paddingAll": "16px",
+                "contents": [
+                  { "type": "text", "text": "SERVICES & SOLUTIONS", "color": "#C0A062", "size": "xxs", "weight": "bold" },
+                  { "type": "text", "text": "02", "color": "#222222", "align": "end", "size": "3xl", "weight": "bold", "position": "absolute", "offsetTop": "5px", "offsetEnd": "15px" }
+                ]
+              },
+              "hero": {
+                "type": "image",
+                "url": IMG_SERVICE,
+                "size": "full", 
+                "aspectRatio": "1:1", 
+                "aspectMode": "fit", 
+                "backgroundColor": "#1a1a1a"
+              },
+              "body": {
+                "type": "box", "layout": "vertical", "paddingAll": "20px",
+                "contents": [
+                  { "type": "text", "text": "客製化財務策劃書", "weight": "bold", "size": "xl", "color": "#111827" },
+                  { "type": "text", "text": "WEALTH MANAGEMENT", "size": "xs", "color": "#9ca3af", "margin": "xs" },
+                  { "type": "separator", "margin": "md", "color": "#EEEEEE" },
+                  { "type": "box", "layout": "vertical", "margin": "md", "spacing": "sm",
+                    "contents": [
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "金流規劃 - 房貸減免 | 退休規劃", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] },
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "風險規劃 - 減少保費 | 提高保障", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] },
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "財務規劃 - 資產配置 | 信貸整合", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] },
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "教育旅遊 - 子女教育 | 免費出國", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] },
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "家族傳承 - 信託 | 傳承 | 尊嚴", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] }
+                    ]
+                  }
+                ]
+              },
+              "footer": {
+                "type": "box", "layout": "vertical", "spacing": "sm", "paddingAll": "16px",
+                "contents": [
+                  { "type": "button", "style": "primary", "height": "sm", "color": "#C0A062", "action": { "type": "uri", "label": "📜 什麼是 RFP?", "uri": "https://www.rfpi.com.tw/portal_a1.php?owner_num=a1_205771&button_num=a1" } },
+                  { "type": "button", "style": "primary", "height": "sm", "color": "#404040", "action": { "type": "uri", "label": "📷 instagram", "uri": "https://www.instagram.com/zzz_24hr" } },
+                  { "type": "button", "style": "primary", "height": "sm", "color": "#404040", "action": { "type": "uri", "label": "📘 facebook", "uri": "https://www.facebook.com/ruonuo?mibextid=LQQJ4d" } }
+                ]
+              }
+            },
+            // === 第三張卡片 (公司照) ===
+            {
+              "type": "bubble",
+              "size": "mega",
+              "header": {
+                "type": "box", "layout": "vertical", "backgroundColor": "#111111", "paddingAll": "16px",
+                "contents": [
+                  { "type": "text", "text": "COMPANY OVERVIEW", "color": "#C0A062", "size": "xxs", "weight": "bold" },
+                  { "type": "text", "text": "03", "color": "#222222", "align": "end", "size": "3xl", "weight": "bold", "position": "absolute", "offsetTop": "5px", "offsetEnd": "15px" }
+                ]
+              },
+              "hero": {
+                "type": "image",
+                "url": IMG_COMPANY,
+                "size": "full", 
+                "aspectRatio": "1:1", 
+                "aspectMode": "fit", 
+                "backgroundColor": "#1a1a1a"
+              },
+              "body": {
+                "type": "box", "layout": "vertical", "paddingAll": "20px",
+                "contents": [
+                  { "type": "text", "text": "御謙VIP菁英會", "weight": "bold", "size": "xl", "color": "#111827" },
+                  { "type": "text", "text": "GROUP PROFILE", "size": "xs", "color": "#9ca3af", "margin": "xs" },
+                  { "type": "separator", "margin": "md", "color": "#EEEEEE" },
+                  { "type": "box", "layout": "vertical", "margin": "md", "spacing": "sm",
+                    "contents": [
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "世界 CIA500 強團隊", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] },
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "[專屬財務規劃] 客製化方案", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] },
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "[人才培訓規劃] 百萬年薪培訓", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] },
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "[資源整合服務] 專業會計師合作", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] },
+                      { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ { "type": "text", "text": "★", "color": "#C0A062", "size": "sm", "flex": 0 }, { "type": "text", "text": "[財經教育講座] 稅務投資講座", "color": "#666666", "size": "sm", "flex": 1, "wrap": true, "weight": "bold" } ] }
+                    ]
+                  }
+                ]
+              },
+              "footer": {
+                "type": "box", "layout": "vertical", "spacing": "sm", "paddingAll": "16px",
+                "contents": [
+                  { "type": "button", "style": "primary", "height": "sm", "color": "#C0A062", "action": { "type": "uri", "label": "📷 御謙 Instagram", "uri": "https://www.instagram.com/youtrend_vip" } },
+                  { "type": "button", "style": "primary", "height": "sm", "color": "#404040", "action": { "type": "uri", "label": "📘 御謙 Facebook", "uri": "https://www.facebook.com/share/1CsML2XrDx/" } },
+                  { "type": "button", "style": "primary", "height": "sm", "color": "#404040", "action": { "type": "uri", "label": "📍 公司地址", "uri": "https://maps.app.goo.gl/81JB2KBH2fMA87Dz7" } }
+                ]
+              }
+            }
+          ]
+        };
+
+        function showUI(id, msg = "") {
+            document.getElementById('statusUI').classList.add('hidden');
+            document.getElementById('manualUI').classList.add('hidden');
+            document.getElementById('errorUI').classList.add('hidden');
+            if(id === 'errorUI') {
+                document.getElementById('errorDetail').innerText = msg;
+                let env = "Env: ";
+                try { env += liff.getOS() + " / " + liff.getLanguage() + " / " + liff.getVersion(); } catch(e){}
+                document.getElementById('envInfo').innerText = env;
+            }
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        async function sendRoseCard() {
+            try {
+                const res = await liff.shareTargetPicker([
+                    {
+                        "type": "flex",
+                        "altText": "若慈與您分享數位名片",
+                        "contents": roseJson
+                    }
+                ]);
+                
+                if (res) { 
+                    liff.closeWindow(); 
+                } else { 
+                    showUI('manualUI'); 
+                }
+            } catch (err) {
+                console.error(err);
+                const code = err.code || "Unknown";
+                const message = err.message || JSON.stringify(err);
+
+                // [Fix] 容錯處理：針對 EXCEPTION_IN_SUBWINDOW (通常是用戶取消或關閉視窗)
+                // 顯示 Manual UI 而非 Error UI，讓體驗不中斷
+                if (code === "EXCEPTION_IN_SUBWINDOW" || message.includes("EXCEPTION_IN_SUBWINDOW")) {
+                    console.log("Subwindow exception handled, showing manual UI");
+                    showUI('manualUI');
+                    return; 
+                }
+
+                showUI('errorUI', `[${code}] ${message}`);
+            }
+        }
+
+        async function main() {
+            try {
+                await liff.init({ liffId: MY_LIFF_ID });
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                } else {
+                    sendRoseCard();
+                }
+            } catch (err) {
+                showUI('errorUI', "LIFF Init Error: " + err.message);
+            }
+        }
+        window.onload = main;
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 </body>
 </html>
